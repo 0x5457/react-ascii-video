@@ -36,6 +36,7 @@ class App extends React.Component<{}, IState> {
         src: window.URL.createObjectURL(files[0])
       });
     }
+    e.target.value = '';
   }
 
   private onUseWebCam: () => void = () => {
