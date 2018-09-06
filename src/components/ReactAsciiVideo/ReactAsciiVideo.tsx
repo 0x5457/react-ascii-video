@@ -105,7 +105,9 @@ export default class ReactAsciiVideo extends React.PureComponent<IProps, IState>
   private async init() {
     const { volume, src, onPlay, height, width } = this.props;
 
-    this.video = document.createElement('video');
+    if (!this.video) {
+      this.video = document.createElement('video');
+    }
     this.video.src = src;
     this.video.volume = volume!;
     this.video.addEventListener('play', onPlay!);
@@ -116,8 +118,10 @@ export default class ReactAsciiVideo extends React.PureComponent<IProps, IState>
     if (width) {
       this.video.width = width;
     }
-
-    this.originalCanvas = document.createElement('canvas');
+    
+    if (!this.originalCanvas) {
+      this.originalCanvas = document.createElement('canvas');
+    }
 
     this.targetCanvas = this.targetCanvasRef.current!;
 
