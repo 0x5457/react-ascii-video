@@ -40,7 +40,7 @@ export default class ReactAsciiVideo extends React.PureComponent<IProps, IState>
   private targetCanvas: HTMLCanvasElement;
   private targetCanvasCtx: CanvasRenderingContext2D;
   private targetCanvasRef: React.RefObject<HTMLCanvasElement>;
-
+  private requestAnimationFrameId: number | null;
   constructor(props: IProps) {
     super(props);
     this.state = {
@@ -54,9 +54,55 @@ export default class ReactAsciiVideo extends React.PureComponent<IProps, IState>
     } as IState;
     this.originalCanvasSize = { height: 0, width: 0 };
     this.targetCanvasRef = React.createRef<HTMLCanvasElement>();
+    this.requestAnimationFrameId = null;
+  }
+  public async componentDidUpdate(prevProps: IProps) {
+    if (this.props.src !== prevProps.src) {
+      await this.init()
+      if (this.state.playing) {
+        this.play();
+      }
+    }
+  }
+  public componentDidMount() {
+    this.init();
   }
 
-  public async componentDidMount() {
+  public render() {
+    return (
+      <div className="react_ascii_video">
+        <canvas className="target_canvas" ref={this.targetCanvasRef} width={this.props.width || this.state.width} height={this.props.height} />
+        <ControlBar
+          onPlay={this.play}
+          onPause={this.pause}
+          playing={this.state.playing}
+          duration={this.state.duration}
+          currentTime={this.state.currentTime}
+        />
+      </div>
+    );
+  }
+
+  public pause = () => {
+    this.video.pause();
+    this.setState({ playing: false });
+    if (this.requestAnimationFrameId) {
+      cancelAnimationFrame(this.requestAnimationFrameId);
+      this.requestAnimationFrameId = null;
+    }
+  }
+
+  public play = () => {
+    this.video.play();
+    this.setState({ playing: true });
+    if (this.requestAnimationFrameId) {
+      cancelAnimationFrame(this.requestAnimationFrameId);
+      this.requestAnimationFrameId = null;
+    }
+    this.startRenderAscii();
+  }
+
+  private async init() {
     const { volume, src, onPlay, height, width } = this.props;
 
     this.video = document.createElement('video');
@@ -89,47 +135,24 @@ export default class ReactAsciiVideo extends React.PureComponent<IProps, IState>
     this.originalCanvasSize.height = this.originalCanvas.height = size.height / this.state.charSize.width;
 
     this.setState({ ...size });
-
     this.renderAscii();
   }
 
-  public render() {
-    return (
-      <div className="react_ascii_video">
-        <canvas className="target_canvas" ref={this.targetCanvasRef} width={this.props.width || this.state.width} height={this.props.height} />
-        <ControlBar
-          onPlay={this.play}
-          onPause={this.pause}
-          playing={this.state.playing}
-          duration={this.state.duration}
-          currentTime={this.state.currentTime}
-        />
-      </div>
+  private renderAscii(): void {
+    this.originalCanvasCtx.drawImage(this.video, 0, 0, this.originalCanvasSize.width, this.originalCanvasSize.height);
+    image2ascii(
+      this.originalCanvasCtx.getImageData(0, 0, this.originalCanvasSize.width, this.originalCanvasSize.height),
+      this.state.width,
+      this.state.height,
+      this.state.charSize,
+      this.targetCanvasCtx,
     );
   }
-
-  public pause = () => {
-    this.video.pause();
-    this.setState({ playing: false });
-  }
-
-  public play = () => {
-    this.video.play();
-    this.setState({ playing: true });
-  }
-
-  private renderAscii(): void {
-    requestAnimationFrame(() => {
-      this.originalCanvasCtx.drawImage(this.video, 0, 0, this.originalCanvasSize.width, this.originalCanvasSize.height);
-      image2ascii(
-        this.originalCanvasCtx.getImageData(0, 0, this.originalCanvasSize.width, this.originalCanvasSize.height),
-        this.state.width,
-        this.state.height,
-        this.state.charSize,
-        this.targetCanvasCtx,
-      );
+  private startRenderAscii(): void {
+    this.requestAnimationFrameId = requestAnimationFrame(() => {
       this.renderAscii();
-    })
+      this.startRenderAscii();
+    });
   }
 
 }

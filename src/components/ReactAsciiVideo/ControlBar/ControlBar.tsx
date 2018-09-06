@@ -30,7 +30,11 @@ export default class ControlBar extends React.PureComponent<IProps> {
                 <PlayIcon />
               </span>
           }
-        {ControlBar.coverTime(this.props.currentTime || 0)} / {ControlBar.coverTime(this.props.duration)}
+        {
+          this.props.duration === Infinity ? 
+            'Live' :
+            `${ControlBar.coverTime(this.props.currentTime || 0)} / ${ControlBar.coverTime(this.props.duration)}`
+        }
         </div>
       </div >
     );
